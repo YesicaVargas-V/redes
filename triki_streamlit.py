@@ -6,9 +6,16 @@ from tensorflow.keras.models import load_model
 
 # Inicializar variables de sesión
 if "tablero" not in st.session_state:
-    st.session_state.tablero = np.zeros(9, dtype=int)  # Tablero vacío
-    st.session_state.turno_jugador = True  # Empieza el jugador
-    st.session_state.movimiento_ia = None  # Último movimiento de la IA
+    st.session_state.tablero = np.zeros(9, dtype=int)
+    st.session_state.turno_jugador = True
+    st.session_state.movimiento_ia = None
+
+# Guardar jugadas en archivo CSV
+def guardar_jugada(tablero, movimiento, jugador):
+    # Abrir el archivo CSV en modo "append" (añadir)
+    with open("jugadas_reales.csv", mode="a", newline="") as archivo:
+        fila = list(tablero) + [movimiento, jugador]
+        pd.DataFrame([fila]).to_csv(archivo, header=False, index=False)
 
 # Cargar modelo entrenado
 def cargar_modelo():
@@ -17,11 +24,6 @@ def cargar_modelo():
     return None
 
 modelo = cargar_modelo()
-
-# Guardar jugadas en archivo CSV
-def guardar_jugada(tablero, movimiento, jugador):
-    with open("jugadas_reales.csv", "a", newline="") as archivo:
-        pd.DataFrame([list(tablero) + [movimiento, jugador]]).to_csv(archivo, header=False, index=False)
 
 # Verificar ganador
 def verificar_ganador(tablero):
@@ -55,9 +57,9 @@ def renderizar_tablero():
         color = "red" if st.session_state.tablero[i] == 1 else ("green" if st.session_state.tablero[i] == -1 else "white")
         with cols[i % 3]:
             if st.session_state.tablero[i] == 0 and st.session_state.turno_jugador:
-                if st.button(" ", key=i, help="Casilla libre", use_container_width=True):
+                if st.button(" ", key=i, use_container_width=True):
                     st.session_state.tablero[i] = 1
-                    guardar_jugada(st.session_state.tablero, i, 1)
+                    guardar_jugada(st.session_state.tablero, i, 1)  # Guardar jugada del jugador
                     st.session_state.turno_jugador = False
                     st.rerun()
             else:
@@ -66,14 +68,13 @@ def renderizar_tablero():
 # Lógica del juego
 st.title("Triki (Tres en Raya) contra la IA")
 
-# Mostrar tablero y actualizar juego
 ganador = verificar_ganador(st.session_state.tablero)
 if ganador is None:
     renderizar_tablero()
     if not st.session_state.turno_jugador:
         movimiento = movimiento_ia(st.session_state.tablero)
         st.session_state.tablero[movimiento] = -1
-        guardar_jugada(st.session_state.tablero, movimiento, -1)
+        guardar_jugada(st.session_state.tablero, movimiento, -1)  # Guardar jugada de la IA
         st.session_state.turno_jugador = True
         st.rerun()
 else:
